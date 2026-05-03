@@ -2,9 +2,11 @@ package com.usc.lugarlangfinal;
 
 import android.database.Cursor;
 import android.database.MatrixCursor;
+import android.content.Intent;
 import android.location.Address;
 import android.os.Bundle;
 import android.provider.BaseColumns;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -31,6 +33,7 @@ public class commuterhome extends AppCompatActivity {
     private MyLocationNewOverlay mLocationOverlay;
     private SearchView searchView;
     private SimpleCursorAdapter suggestionAdapter;
+    private LinearLayout btnAIHelp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +47,12 @@ public class commuterhome extends AppCompatActivity {
 
         setupMap();
         setupSearch();
+        setupAIHelpButton();
+    }
+
+    private void setupAIHelpButton() {
+        btnAIHelp = findViewById(R.id.btnaihelp);
+        btnAIHelp.setOnClickListener(v -> startActivity(new Intent(commuterhome.this, AIChatbotActivity.class)));
     }
 
     private void setupMap() {

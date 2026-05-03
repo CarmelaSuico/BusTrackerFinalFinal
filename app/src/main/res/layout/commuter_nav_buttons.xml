@@ -67,6 +67,31 @@
                 android:fontFamily="sans-serif-medium"/>
         </LinearLayout>
 
+        <!-- AI Help -->
+        <LinearLayout
+            android:id="@+id/btnaihelp"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/pill_background">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/person_24px"
+                app:tint="@color/nav_color" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI Help"
+                android:textSize="10sp"
+                android:textColor="@color/nav_color"
+                android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+
         <!-- Back -->
         <LinearLayout
             android:id="@+id/btnsetting"
