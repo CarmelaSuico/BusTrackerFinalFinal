@@ -32,8 +32,8 @@ import java.util.Map;
 
 public class Ticketing extends AppCompatActivity {
     private Spinner spOrigin, spDestination, spPassengerType;
-    private TextView tvTicketT1, tvTicketT2;
-    private Button btnSubmit;
+    private TextView tvTicketT1, tvTicketT2, tvPassengerCount;
+    private Button btnSubmit, btnAddPassenger, btnSubtractPassenger;
     private LinearLayout btnDashboardNav, btnTicket, btnSetting;
 
     private String routeCode, companyName, employeeId;
@@ -42,6 +42,8 @@ public class Ticketing extends AppCompatActivity {
     private double baseFare, additionalFarePerBand;
     private int distanceBands;
     private final double DISCOUNT_RATE = 0.20;
+
+    private int passengerCount = 0;
 
     private final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
@@ -52,6 +54,7 @@ public class Ticketing extends AppCompatActivity {
 
         initViews();
         setupNavigation();
+        setupPassengerCounter();
 
         routeCode = getIntent().getStringExtra("ROUTE_CODE");
         companyName = getIntent().getStringExtra("COMPANY_NAME");
@@ -77,6 +80,11 @@ public class Ticketing extends AppCompatActivity {
         tvTicketT2 = findViewById(R.id.tvTicketT2);
         btnSubmit = findViewById(R.id.btnSubmitTicket);
 
+        // Passenger Counter Views
+        tvPassengerCount = findViewById(R.id.tvPassengerCount);
+        btnAddPassenger = findViewById(R.id.btnAddPassenger);
+        btnSubtractPassenger = findViewById(R.id.btnSubtractPassenger);
+
         // Navigation buttons from included layout
         btnDashboardNav = findViewById(R.id.btndriverorconddashoard);
         btnTicket = findViewById(R.id.btnticketing);
@@ -100,8 +108,24 @@ public class Ticketing extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+    }
 
+    private void setupPassengerCounter() {
+        btnAddPassenger.setOnClickListener(v -> {
+            passengerCount++;
+            updatePassengerCountUI();
+        });
 
+        btnSubtractPassenger.setOnClickListener(v -> {
+            if (passengerCount > 0) {
+                passengerCount--;
+                updatePassengerCountUI();
+            }
+        });
+    }
+
+    private void updatePassengerCountUI() {
+        tvPassengerCount.setText(String.valueOf(passengerCount));
     }
 
     private void setupPassengerTypeSpinner() {
@@ -174,6 +198,10 @@ public class Ticketing extends AppCompatActivity {
             return;
         }
 
+        // AUTO-INCREMENT immediately when "Issue Ticket" is pressed
+        passengerCount++;
+        updatePassengerCountUI();
+
         GeoPoint start = stopPoints.get(originIdx);
         GeoPoint end = stopPoints.get(destIdx);
         double distanceKm = start.distanceToAsDouble(end) / 1000.0;
@@ -226,13 +254,10 @@ public class Ticketing extends AppCompatActivity {
             return;
         }
 
-        // Reference to ticket_logs instead of trip_logs to separate data
         DatabaseReference ticketsRef = FirebaseDatabase.getInstance(DB_URL).getReference("ticket_logs")
                 .child(companyName)
                 .child(employeeId.replace(".", ","));
 
-        // NEW: Create a human-readable timestamp
-        // Format example: "May 02, 2026 11:30 AM"
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a", java.util.Locale.getDefault());
         String readableTimestamp = sdf.format(new java.util.Date());
 
@@ -243,7 +268,7 @@ public class Ticketing extends AppCompatActivity {
         ticket.put("regular_fare", Math.round(reg * 100.0) / 100.0);
         ticket.put("discount", Math.round(disc * 100.0) / 100.0);
         ticket.put("total_fare", Math.round(total * 100.0) / 100.0);
-        ticket.put("timestamp", readableTimestamp); // Now saves as a readable string
+        ticket.put("timestamp", readableTimestamp);
         ticket.put("route_code", routeCode);
 
         String ticketKey = ticketsRef.push().getKey();
