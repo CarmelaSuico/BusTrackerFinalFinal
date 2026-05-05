@@ -1,8 +1,10 @@
 package com.usc.lugarlangfinal;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -26,6 +28,7 @@ public class LoginPage extends AppCompatActivity {
     private EditText edusername, edpassword;
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
+    private ProgressDialog progressDialog;
 
     // Your specific database URL
     private final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
@@ -39,6 +42,11 @@ public class LoginPage extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance(DB_URL).getReference("employee");
 
+        // Initialize ProgressDialog
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Logging in...");
+        progressDialog.setCancelable(false);
+
         // Finding the IDs
         btnLogin = findViewById(R.id.btnlogin);
         edusername = findViewById(R.id.edusername);
@@ -48,6 +56,7 @@ public class LoginPage extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> {
             startActivity(new Intent(LoginPage.this, commuterhome.class));
+            finish();
         });
 
         btnLogin.setOnClickListener(v -> performLogin());
@@ -63,13 +72,16 @@ public class LoginPage extends AppCompatActivity {
             return;
         }
 
+        progressDialog.show();
+
         // 1. Search for the employee by name in the database
         dbRef.orderByChild("name").equalTo(username).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
+                    boolean userFound = false;
                     for (DataSnapshot ds : snapshot.getChildren()) {
-
+                        userFound = true;
                         // Handle password as either String or Number from DB
                         Object dbPassObj = ds.child("password").getValue();
                         String dbPassword = (dbPassObj != null) ? String.valueOf(dbPassObj) : "";
@@ -83,22 +95,27 @@ public class LoginPage extends AppCompatActivity {
                                 // 3. If password matches, sign in to Firebase Auth session
                                 signInWithFirebase(email, inputPassword, role);
                             } else {
+                                progressDialog.dismiss();
                                 showErrorDialog("Login Error", "No email found for this user in the database.");
                             }
                         } else {
+                            progressDialog.dismiss();
                             showErrorDialog("Login Failed", "Incorrect password. Please try again.");
                             edpassword.setText("");
                         }
-                        return; // Exit after first match
+                        break; // Exit after first match
                     }
                 } else {
-                    showErrorDialog("Access Denied", "User not found in our records.");
+                    progressDialog.dismiss();
+                    showErrorDialog("Access Denied", "User not found in our records. Please check the name spelling.");
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                progressDialog.dismiss();
                 showErrorDialog("Database Error", error.getMessage());
+                Log.e("LoginPage", "Database error: " + error.getMessage());
             }
         });
     }
@@ -106,6 +123,7 @@ public class LoginPage extends AppCompatActivity {
     private void signInWithFirebase(String email, String password, String role) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
+                    progressDialog.dismiss();
                     if (task.isSuccessful()) {
                         // 4. Redirect based on Role
                         Intent intent;
