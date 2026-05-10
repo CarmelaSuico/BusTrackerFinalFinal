@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".commuter.SeachingOriginDesti">
+
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapCommuter"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Container for Search Inputs to prevent overlapping -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="50dp"
+        android:paddingHorizontal="@dimen/screen_padding"
+        android:gravity="center_horizontal">
+
+        <!-- Origin Search Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_origin"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="@dimen/card_corner_radius_medium"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white">
+
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/searchorigin"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:defaultQueryHint="Origin place..."
+                app:searchIcon="@drawable/trip_origin_24px"
+                app:iconifiedByDefault="false"
+                app:queryBackground="@android:color/transparent"
+                android:theme="@style/SearchTextBlack"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Destination Search Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_destination"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="@dimen/card_corner_radius_medium"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white">
+
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/searchdestination"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:defaultQueryHint="Destination place..."
+                app:iconifiedByDefault="false"
+                app:searchIcon="@drawable/location_on_24px"
+                app:queryBackground="@android:color/transparent"
+                android:theme="@style/SearchTextBlack"/>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSuggestionRoutes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Suggestion Routes"
+        android:visibility="gone"
+        app:icon="@drawable/bus_railway_24px"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="110dp"
+        android:layout_marginEnd="20dp"
+        app:cornerRadius="20dp"
+        app:backgroundTint="#E1D5D9"
+        android:textColor="@color/black"
+        app:iconTint="@color/black"
+        android:textAllCaps="false"
+        android:textSize="12sp" />
+
+    <!-- Bottom Navigation Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/nav_bottom_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="24dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="12dp"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="@color/white">
+
+        <include layout="@layout/commuter_nav_buttons"/>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

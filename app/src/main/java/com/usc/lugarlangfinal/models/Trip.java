@@ -1,69 +1,106 @@
 package com.usc.lugarlangfinal.models;
 
-import com.google.firebase.database.Exclude;
 import com.google.firebase.database.PropertyName;
+import java.io.Serializable;
 
-public class Trip {
+public class Trip implements Serializable {
 
-    // 1. Change these to private or use @Exclude to stop the conflict
-    @Exclude
-    public String tripId, routeCode, vehicleCode, plateNumber, terminal1, terminal2;
-    @Exclude
-    public String driverName, conductorName, departureTime, status, franchise;
-    @Exclude
-    public String t1_Coords, t2_Coords, stops, stops_Coords;
+    private String tripId = "";
+    private String routeCode = "";
+    private String vehicleCode = "";
+    private String plateNumber = "";
+    private String terminal1 = "";
+    private String terminal2 = "";
+    private String driverName = "N/A";
+    private String conductorName = "N/A";
+    private String departureTime = "--:--";
+    private String status = "Unknown";
+    private String franchise = "";
+    private String t1_Coords = "0,0";
+    private String t2_Coords = "0,0";
+    private String stops = "";
+    private String stops_Coords = "";
+    private String assignedTransport = "";
 
     public Trip() {} // Required for Firebase
 
-    // 2. Keep your annotated methods; Firebase will use these exclusively
+    @PropertyName("tripId")
+    public String getTripId() { return tripId; }
+    @PropertyName("tripId")
+    public void setTripId(String v) { this.tripId = v != null ? v : ""; }
+
+    @PropertyName("RouteCode")
+    public String getRouteCode() { return routeCode; }
+    @PropertyName("RouteCode")
+    public void setRouteCode(String v) { this.routeCode = v != null ? v : ""; }
+
+    @PropertyName("VehicleCode")
+    public String getVehicleCode() { return vehicleCode; }
+    @PropertyName("VehicleCode")
+    public void setVehicleCode(String v) { this.vehicleCode = v != null ? v : ""; }
+
     @PropertyName("PlateNumber")
     public String getPlateNumber() { return plateNumber; }
-
     @PropertyName("PlateNumber")
-    public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
+    public void setPlateNumber(String v) { this.plateNumber = v != null ? v : ""; }
 
-    // 3. For the rest of the fields, Firebase defaults to camelCase if no annotation is present.
-    // If your database uses PascalCase for ALL fields, you must add @PropertyName to each getter/setter.
-
-    public String getTripId() { return tripId; }
-    public void setTripId(String tripId) { this.tripId = tripId; }
-
-    public String getRouteCode() { return routeCode; }
-    public void setRouteCode(String routeCode) { this.routeCode = routeCode; }
-
-    public String getVehicleCode() { return vehicleCode; }
-    public void setVehicleCode(String vehicleCode) { this.vehicleCode = vehicleCode; }
-
+    @PropertyName("Terminal1")
     public String getTerminal1() { return terminal1; }
-    public void setTerminal1(String terminal1) { this.terminal1 = terminal1; }
+    @PropertyName("Terminal1")
+    public void setTerminal1(String v) { this.terminal1 = v != null ? v : ""; }
 
+    @PropertyName("Terminal2")
     public String getTerminal2() { return terminal2; }
-    public void setTerminal2(String terminal2) { this.terminal2 = terminal2; }
+    @PropertyName("Terminal2")
+    public void setTerminal2(String v) { this.terminal2 = v != null ? v : ""; }
 
+    @PropertyName("driverName")
     public String getDriverName() { return driverName; }
-    public void setDriverName(String driverName) { this.driverName = driverName; }
+    @PropertyName("driverName")
+    public void setDriverName(String v) { this.driverName = v != null ? v : "N/A"; }
 
+    @PropertyName("conductorName")
     public String getConductorName() { return conductorName; }
-    public void setConductorName(String conductorName) { this.conductorName = conductorName; }
+    @PropertyName("conductorName")
+    public void setConductorName(String v) { this.conductorName = v != null ? v : "N/A"; }
 
+    @PropertyName("departureTime")
     public String getDepartureTime() { return departureTime; }
-    public void setDepartureTime(String departureTime) { this.departureTime = departureTime; }
+    @PropertyName("departureTime")
+    public void setDepartureTime(String v) { this.departureTime = v != null ? v : "--:--"; }
 
+    @PropertyName("status")
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    @PropertyName("status")
+    public void setStatus(String v) { this.status = v != null ? v : "Unknown"; }
 
+    @PropertyName("franchise")
     public String getFranchise() { return franchise; }
-    public void setFranchise(String franchise) { this.franchise = franchise; }
+    @PropertyName("franchise")
+    public void setFranchise(String v) { this.franchise = v != null ? v : ""; }
 
-    public String getT1_Coords() { return t1_Coords; }
-    public void setT1_Coords(String t1_Coords) { this.t1_Coords = t1_Coords; }
+    @PropertyName("T1_Coords")
+    public String getT1Coords() { return t1_Coords; }
+    @PropertyName("T1_Coords")
+    public void setT1Coords(String v) { this.t1_Coords = v != null ? v : "0,0"; }
 
-    public String getT2_Coords() { return t2_Coords; }
-    public void setT2_Coords(String t2_Coords) { this.t2_Coords = t2_Coords; }
+    @PropertyName("T2_Coords")
+    public String getT2Coords() { return t2_Coords; }
+    @PropertyName("T2_Coords")
+    public void setT2Coords(String v) { this.t2_Coords = v != null ? v : "0,0"; }
 
+    @PropertyName("Stops")
     public String getStops() { return stops; }
-    public void setStops(String stops) { this.stops = stops; }
+    @PropertyName("Stops")
+    public void setStops(String v) { this.stops = v != null ? v : ""; }
 
-    public String getStops_Coords() { return stops_Coords; }
-    public void setStops_Coords(String stops_Coords) { this.stops_Coords = stops_Coords; }
+    @PropertyName("Stop_Coords")
+    public String getStopCoords() { return stops_Coords; }
+    @PropertyName("Stop_Coords")
+    public void setStopCoords(String v) { this.stops_Coords = v != null ? v : ""; }
+
+    @PropertyName("AssignedTransport")
+    public String getAssignedTransport() { return assignedTransport; }
+    @PropertyName("AssignedTransport")
+    public void setAssignedTransport(String v) { this.assignedTransport = v != null ? v : ""; }
 }

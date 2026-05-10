@@ -1,19 +1,31 @@
 package com.usc.lugarlangfinal;
 
+import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.content.Intent;
 import android.location.Address;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
+
+import com.usc.lugarlangfinal.commuter.SeachingOriginDesti;
 
 import org.osmdroid.bonuspack.location.NominatimPOIProvider;
 import org.osmdroid.bonuspack.location.POI;
@@ -28,10 +40,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class commuterhome extends AppCompatActivity {
+public class commuterhome extends BaseActivity {
 
-    LinearLayout btnHomePage, btnSearch, btnSetting;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1000;
 
+    private LinearLayout btnHomePage, btnSearch, btnSetting;
     private MapView map;
     private MyLocationNewOverlay mLocationOverlay;
     private SearchView searchView;
@@ -42,24 +55,32 @@ public class commuterhome extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Configuration.getInstance().setUserAgentValue(getPackageName());
+        // OSMDroid User Agent is required for map tile loading
+        Configuration.getInstance().setUserAgentValue("com.usc.lugarlangfinal");
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
         setContentView(R.layout.activity_commuterhome);
 
+        // Initialize UI Elements
         map = findViewById(R.id.mapdisplay);
         searchView = findViewById(R.id.searchPlace);
-
         btnHomePage = findViewById(R.id.btnhomepage);
         btnSearch = findViewById(R.id.btnsearch);
         btnSetting = findViewById(R.id.btnsetting);
 
         btnHomePage.setSelected(true);
 
-        btnSetting.setOnClickListener(v -> {
-            startActivity(new Intent(commuterhome.this, Settings.class));
+        // Navigation Listeners
+        btnSearch.setOnClickListener(v -> {
+            startActivity(new Intent(commuterhome.this, SeachingOriginDesti.class));
         });
 
+        btnSetting.setOnClickListener(v -> {
+            // FIX: Explicitly use your local Settings activity
+            startActivity(new Intent(commuterhome.this, com.usc.lugarlangfinal.Settings.class));
+        });
 
-        setupMap();
+        // Start Permission and GPS Sequence
+        checkLocationPermissions();
         setupSearch();
         setupAIHelpButton();
     }
@@ -69,18 +90,71 @@ public class commuterhome extends AppCompatActivity {
         btnAIHelp.setOnClickListener(v -> startActivity(new Intent(commuterhome.this, AIChatbotActivity.class)));
     }
 
+    private void checkLocationPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            checkGpsEnabled();
+        }
+    }
+
+    private void checkGpsEnabled() {
+        LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean gpsEnabled = false;
+        try {
+            gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        } catch (Exception ignored) {}
+
+        if (!gpsEnabled) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Location Services Disabled")
+                    .setMessage("Please turn on your GPS to allow the app to find your current location.")
+                    .setCancelable(false)
+                    .setPositiveButton("Settings", (dialog, which) -> {
+                        // FIX: Use the specific System Action to prevent ActivityNotFoundException
+                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> {
+                        setupMap(); // Load map without GPS
+                    })
+                    .show();
+        } else {
+            setupMap();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                checkGpsEnabled();
+            } else {
+                Toast.makeText(this, "Location permission denied. Map will not track you.", Toast.LENGTH_SHORT).show();
+                setupMap();
+            }
+        }
+    }
+
     private void setupMap() {
         map.setMultiTouchControls(true);
         map.getController().setZoom(15.0);
+        map.getController().setCenter(new GeoPoint(10.3157, 123.8854)); // Cebu City
 
-        mLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), map);
-        mLocationOverlay.enableMyLocation();
-        mLocationOverlay.enableFollowLocation();
-        map.getOverlays().add(mLocationOverlay);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), map);
+            mLocationOverlay.enableMyLocation();
+            mLocationOverlay.enableFollowLocation();
+            map.getOverlays().add(mLocationOverlay);
+        }
     }
 
     private void setupSearch() {
-        // 1. Initialize the adapter for suggestions
         String[] from = new String[]{"place_name"};
         int[] to = new int[]{android.R.id.text1};
         suggestionAdapter = new SimpleCursorAdapter(this,
@@ -97,7 +171,6 @@ public class commuterhome extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                // 2. Only fetch suggestions if user typed 3 or more characters
                 if (newText.length() >= 3) {
                     fetchSuggestions(newText);
                 }
@@ -105,7 +178,6 @@ public class commuterhome extends AppCompatActivity {
             }
         });
 
-        // 3. Handle clicking a suggestion from the dropdown
         searchView.setOnSuggestionListener(new SearchView.OnSuggestionListener() {
             @Override
             public boolean onSuggestionSelect(int position) { return false; }
@@ -113,10 +185,9 @@ public class commuterhome extends AppCompatActivity {
             @Override
             public boolean onSuggestionClick(int position) {
                 Cursor cursor = suggestionAdapter.getCursor();
-                if (cursor.moveToPosition(position)) {
-                    int index = cursor.getColumnIndexOrThrow("place_name");
-                    String selection = cursor.getString(index);
-                    searchView.setQuery(selection, true); // Submits the search
+                if (cursor != null && cursor.moveToPosition(position)) {
+                    String selection = cursor.getString(cursor.getColumnIndexOrThrow("place_name"));
+                    searchView.setQuery(selection, true);
                 }
                 return true;
             }
@@ -124,16 +195,15 @@ public class commuterhome extends AppCompatActivity {
     }
 
     private void fetchSuggestions(String text) {
+        final GeoPoint biasLocation = (mLocationOverlay != null && mLocationOverlay.getMyLocation() != null)
+                ? mLocationOverlay.getMyLocation()
+                : (GeoPoint) map.getMapCenter();
+
         new Thread(() -> {
             try {
                 NominatimPOIProvider poiProvider = new NominatimPOIProvider(getPackageName());
-                GeoPoint currentPos = mLocationOverlay.getMyLocation();
+                ArrayList<POI> pois = poiProvider.getPOICloseTo(biasLocation, text, 5, 0.1);
 
-                // Fetch up to 5 potential matches near the commuter
-                // Fixed: getPOIsAround replaced with getPOICloseTo which is available in osmbonuspack 6.9.0
-                ArrayList<POI> pois = poiProvider.getPOICloseTo(currentPos, text, 5, 0.1);
-
-                // Create a MatrixCursor to pass data to the SimpleCursorAdapter
                 MatrixCursor cursor = new MatrixCursor(new String[]{BaseColumns._ID, "place_name"});
                 if (pois != null) {
                     for (int i = 0; i < pois.size(); i++) {
@@ -152,10 +222,10 @@ public class commuterhome extends AppCompatActivity {
         new Thread(() -> {
             try {
                 android.location.Geocoder geocoder = new android.location.Geocoder(this, Locale.getDefault());
-                List<Address> addresses = geocoder.getFromLocationName(locationName, 1);
+                List<Address> addresses = geocoder.getFromLocationName(locationName + ", Cebu", 1);
 
                 if (addresses != null && !addresses.isEmpty()) {
-                    android.location.Address address = addresses.get(0);
+                    Address address = addresses.get(0);
                     GeoPoint targetPoint = new GeoPoint(address.getLatitude(), address.getLongitude());
 
                     runOnUiThread(() -> {
@@ -171,7 +241,7 @@ public class commuterhome extends AppCompatActivity {
                     });
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
@@ -180,11 +250,13 @@ public class commuterhome extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         map.onResume();
+        if (mLocationOverlay != null) mLocationOverlay.enableMyLocation();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         map.onPause();
+        if (mLocationOverlay != null) mLocationOverlay.disableMyLocation();
     }
 }
