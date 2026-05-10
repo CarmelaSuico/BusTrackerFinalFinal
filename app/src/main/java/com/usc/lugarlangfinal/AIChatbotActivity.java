@@ -83,6 +83,8 @@ public class AIChatbotActivity extends AppCompatActivity {
         rvChat.setLayoutManager(new LinearLayoutManager(this));
         rvChat.setAdapter(chatAdapter);
 
+        showIntroduction();
+
         loadAnalyticsData();
         checkLocationPermission();
 
@@ -95,6 +97,13 @@ public class AIChatbotActivity extends AppCompatActivity {
                 handleUserMessage(message);
             }
         });
+    }
+
+    private void showIntroduction() {
+        String intro = "Hello! I am LugarLang AI Assistant, your intelligent companion for navigating Cebu's bus routes. " +
+                "I can help you with predictive ETAs, seat availability forecasting, and recommending the best time to leave for your trip. " +
+                "How can I assist you today?";
+        addChatMessage(intro, false);
     }
 
     private void checkLocationPermission() {
