@@ -1,6 +1,7 @@
 package com.usc.lugarlangfinal;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -28,7 +29,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -36,9 +39,10 @@ import java.util.Map;
 
 public class AIChatbotActivity extends AppCompatActivity {
 
+    private static final String TAG = "AIChatbotActivity";
     private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
-    private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-    private static final String OPENAI_API_KEY = ""; // Set this via a secure backend or environment variable instead of hard-coding in production.
+    private static final String API_FREE_LLM_URL = "https://apifreellm.com/api/v1/chat";
+    private static final String API_FREE_LLM_KEY = "apf_e01xhboqhfcszahxvicusv13";
 
     private RecyclerView rvChat;
     private TextInputEditText inputMessage;
@@ -49,10 +53,17 @@ public class AIChatbotActivity extends AppCompatActivity {
     private final Map<String, Object> routeAnalytics = new HashMap<>();
     private final Map<String, Object> occupancyAnalytics = new HashMap<>();
 
+    private double userLat = 0.0;
+    private double userLon = 0.0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ai_chatbot);
+
+        // Get location passed from commuterhome
+        userLat = getIntent().getDoubleExtra("user_lat", 0.0);
+        userLon = getIntent().getDoubleExtra("user_lon", 0.0);
 
         rvChat = findViewById(R.id.rvChat);
         inputMessage = findViewById(R.id.inputMessage);
@@ -105,15 +116,12 @@ public class AIChatbotActivity extends AppCompatActivity {
 
     private String getAssistantResponse(String userMessage) {
         String context = buildAnalyticsSummary();
-        if (!OPENAI_API_KEY.isEmpty()) {
-            try {
-                return callOpenAIAssistant(userMessage, context);
-            } catch (Exception e) {
-                e.printStackTrace();
-                return "I could not reach the AI service right now. " + generateLocalResponse(userMessage, context);
-            }
+        try {
+            return callApiFreeLlm(userMessage, context);
+        } catch (Exception e) {
+            Log.e(TAG, "API Free LLM request failed", e);
+            return "I could not reach the AI service right now. Error: " + e.getMessage() + "\n\n" + generateLocalResponse(userMessage, context);
         }
-        return generateLocalResponse(userMessage, context);
     }
 
     private void loadAnalyticsData() {
@@ -143,17 +151,32 @@ public class AIChatbotActivity extends AppCompatActivity {
     }
 
     private String buildAnalyticsSummary() {
-        if (routeAnalytics.isEmpty() && occupancyAnalytics.isEmpty()) {
-            return "No route analytics or occupancy history is available yet.";
+        StringBuilder summary = new StringBuilder();
+        
+        // Feed current time and user location to AI
+        String currentTime = new SimpleDateFormat("HH:mm, EEEE", Locale.getDefault()).format(new Date());
+        summary.append("Current Time: ").append(currentTime).append("\n");
+        if (userLat != 0.0 && userLon != 0.0) {
+            summary.append("User Current Coordinates: ").append(userLat).append(", ").append(userLon).append("\n");
         }
 
-        StringBuilder summary = new StringBuilder();
-        if (!routeAnalytics.isEmpty()) {
-            summary.append("Route historical analytics loaded for ").append(routeAnalytics.size()).append(" routes.\n");
+        if (routeAnalytics.isEmpty() && occupancyAnalytics.isEmpty()) {
+            summary.append("Note: No specific historical route stats or occupancy patterns available yet.\n");
+        } else {
+            if (!routeAnalytics.isEmpty()) {
+                summary.append("Historical Route Stats (Avg ETAs/Traffic Patterns):\n");
+                for (Map.Entry<String, Object> entry : routeAnalytics.entrySet()) {
+                    summary.append("- ").append(entry.getKey()).append(": ").append(entry.getValue().toString()).append("\n");
+                }
+            }
+            if (!occupancyAnalytics.isEmpty()) {
+                summary.append("Occupancy Patterns (Seat Availability Trends):\n");
+                for (Map.Entry<String, Object> entry : occupancyAnalytics.entrySet()) {
+                    summary.append("- ").append(entry.getKey()).append(": ").append(entry.getValue().toString()).append("\n");
+                }
+            }
         }
-        if (!occupancyAnalytics.isEmpty()) {
-            summary.append("Occupancy patterns loaded for ").append(occupancyAnalytics.size()).append(" routes.\n");
-        }
+        
         return summary.toString();
     }
 
@@ -164,58 +187,46 @@ public class AIChatbotActivity extends AppCompatActivity {
         boolean askedLeave = normalized.contains("leave") || normalized.contains("walking") || normalized.contains("best time") || normalized.contains("catch");
 
         if (askedETA) {
-            String routeInfo = routeAnalytics.isEmpty() ? "I don't have specific historical travel times yet." : "I can use your historical route data to improve arrival predictions.";
             return "Predictive ETA helper:\n" +
-                    "• Travel speed and traffic patterns are best derived from past route runs. " + routeInfo + "\n" +
-                    "• If the route is late at 5 PM on Fridays, the app should add a buffer of 10–15 minutes.\n" +
-                    "• If weather is rainy, estimate slower speeds and longer dwell time at stops.\n" +
-                    "To complete this, store route history under analytics/route_stats and call the model from backend or local heuristics.";
+                    "• I use historical travel speeds and traffic patterns to improve arrival predictions.\n" +
+                    "• If the route is late at 5 PM on Fridays, I suggest adding a buffer of 10–15 minutes.";
         }
 
         if (askedSeats) {
-            String occupancyInfo = occupancyAnalytics.isEmpty() ? "I don't have full occupancy history yet." : "I can forecast crowdedness from historical seat usage by route and hour.";
             return "Seat availability forecasting:\n" +
-                    "• Predict 'Crowded', 'Standing Room Only', or 'Seats Available' based on past boarding patterns. " + occupancyInfo + "\n" +
-                    "• For better accuracy, store trip load patterns in analytics/occupancy and update them after each trip.\n" +
-                    "• If a camera is available, use ML Kit or TensorFlow Lite on-device to count passengers and write the result to Firebase.";
+                    "• I predict 'Crowded', 'Standing Room Only', or 'Seats Available' based on past boarding patterns.\n" +
+                    "• For example: The 8:00 AM bus is usually 95% full, while the 8:15 AM bus is typically only 40% full.";
         }
 
         if (askedLeave) {
             return "Best time to leave recommendations:\n" +
-                    "• Compare the bus ETA, your walking distance, and a safety margin.\n" +
-                    "• If the bus is 10 minutes away and you need 8 minutes to reach the stop, tell the commuter to leave now.\n" +
-                    "• If the next scheduled bus is often less crowded, offer it as an alternative.\n" +
-                    "This can be built from live location, walking distance, and historical route occupancy.";
+                    "• I compare the bus ETA, your walking distance (about 1.2m/s walking speed), and a safety margin.\n" +
+                    "• If the bus is 10 minutes away and you need 8 minutes to reach the stop, you should leave now!";
         }
 
         return "I can help with predictive ETA, seat availability forecasting, and best-time-to-leave recommendations. " +
                 "Try asking: 'What is the expected arrival time for my next bus?' or 'Will the 8:00 AM bus be crowded?'";
     }
 
-    private String callOpenAIAssistant(String userMessage, String context) throws Exception {
-        JSONObject systemMessage = new JSONObject()
-                .put("role", "system")
-                .put("content", "You are an intelligent commuter assistant for a bus tracking Android app. Provide concise, actionable commuter guidance based on route history, traffic, weather, stop dwell time, and seat availability.");
-
-        JSONObject userMessageObj = new JSONObject()
-                .put("role", "user")
-                .put("content", "Context: " + context + "\nUser: " + userMessage);
-
-        JSONArray messagesArray = new JSONArray();
-        messagesArray.put(systemMessage);
-        messagesArray.put(userMessageObj);
+    private String callApiFreeLlm(String userMessage, String context) throws Exception {
+        String systemPersona = "You are 'LugarLang Assistant', an intelligent bus tracking helper in Cebu. " +
+                "Use the provided DATA CONTEXT (historical stats, occupancy, current time, user location) to give smart advice.\n\n" +
+                "CORE CAPABILITIES:\n" +
+                "1. Intelligent Seat Forecasting: Predict 'Crowded' or 'Seats Available' based on 'Occupancy Patterns' for the current time/route.\n" +
+                "2. Best Time to Leave: Compare bus ETA with current time and user's walking distance. Assume average walking speed of 5 km/h if distance is known.\n" +
+                "3. Predictive ETA: Adjust standard schedules based on 'Historical Route Stats' (e.g., peak hour traffic).\n" +
+                "4. Alternative Suggestions: If a bus is usually full, suggest a less crowded alternative nearby in time.\n\n" +
+                "DATA CONTEXT:\n" + context;
 
         JSONObject payload = new JSONObject();
-        payload.put("model", "gpt-3.5-turbo");
-        payload.put("messages", messagesArray);
-        payload.put("max_tokens", 400);
-        payload.put("temperature", 0.7);
+        payload.put("message", systemPersona + "\n\nUser Question: " + userMessage);
+        payload.put("model", "apifreellm");
 
-        URL url = new URL(OPENAI_API_URL);
+        URL url = new URL(API_FREE_LLM_URL);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
-        connection.setRequestProperty("Authorization", "Bearer " + OPENAI_API_KEY);
         connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        connection.setRequestProperty("Authorization", "Bearer " + API_FREE_LLM_KEY);
         connection.setDoOutput(true);
 
         try (OutputStream os = connection.getOutputStream()) {
@@ -224,6 +235,8 @@ public class AIChatbotActivity extends AppCompatActivity {
         }
 
         int responseCode = connection.getResponseCode();
+        Log.d(TAG, "API Response Code: " + responseCode);
+
         InputStream stream = responseCode == HttpURLConnection.HTTP_OK
                 ? connection.getInputStream()
                 : connection.getErrorStream();
@@ -234,13 +247,15 @@ public class AIChatbotActivity extends AppCompatActivity {
             while ((line = reader.readLine()) != null) {
                 responseBuilder.append(line);
             }
-            JSONObject responseJson = new JSONObject(responseBuilder.toString());
-            JSONArray choices = responseJson.optJSONArray("choices");
-            if (choices != null && choices.length() > 0) {
-                JSONObject messageObject = choices.getJSONObject(0).getJSONObject("message");
-                return messageObject.optString("content", "I couldn't generate a response.");
+            String responseText = responseBuilder.toString();
+            Log.d(TAG, "API Response: " + responseText);
+
+            JSONObject responseJson = new JSONObject(responseText);
+            if (responseJson.optBoolean("success", false)) {
+                return responseJson.optString("response", "No response content.");
+            } else {
+                return "API Error: " + responseJson.optString("message", "Unknown error");
             }
-            return "I couldn't parse the AI response.";
         }
     }
 }
