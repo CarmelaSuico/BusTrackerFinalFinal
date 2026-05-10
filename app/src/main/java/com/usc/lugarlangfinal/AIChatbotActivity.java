@@ -71,7 +71,7 @@ public class AIChatbotActivity extends AppCompatActivity {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Try to get location passed from Intent first
+        // Get location passed from commuterhome as a fallback
         userLat = getIntent().getDoubleExtra("user_lat", 0.0);
         userLon = getIntent().getDoubleExtra("user_lon", 0.0);
 
@@ -98,20 +98,26 @@ public class AIChatbotActivity extends AppCompatActivity {
     }
 
     private void checkLocationPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
         } else {
             fetchCurrentLocation();
         }
     }
 
     private void fetchCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            
             fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
                 if (location != null) {
                     userLat = location.getLatitude();
                     userLon = location.getLongitude();
-                    Log.d(TAG, "Location updated: " + userLat + ", " + userLon);
+                    Log.d(TAG, "Location fetched: " + userLat + ", " + userLon);
                 }
             });
         }
@@ -124,7 +130,7 @@ public class AIChatbotActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 fetchCurrentLocation();
             } else {
-                Toast.makeText(this, "Location permission denied. AI advice will be less specific.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Location permission denied. AI suggestions might be less accurate.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -196,21 +202,18 @@ public class AIChatbotActivity extends AppCompatActivity {
     private String buildAnalyticsSummary() {
         StringBuilder summary = new StringBuilder();
         
+        // Feed current time and user location to AI
         String currentTime = new SimpleDateFormat("HH:mm, EEEE", Locale.getDefault()).format(new Date());
         summary.append("Current Time: ").append(currentTime).append("\n");
-        
         if (userLat != 0.0 && userLon != 0.0) {
             summary.append("User Current Coordinates: ").append(userLat).append(", ").append(userLon).append("\n");
-            summary.append("Permission Status: Location Access Granted.\n");
-        } else {
-            summary.append("Permission Status: Location Access Pending or 0.0/0.0 coordinates.\n");
         }
 
         if (routeAnalytics.isEmpty() && occupancyAnalytics.isEmpty()) {
-            summary.append("Note: No specific historical route stats available yet.\n");
+            summary.append("Note: No specific historical route stats or occupancy patterns available yet.\n");
         } else {
             if (!routeAnalytics.isEmpty()) {
-                summary.append("Historical Route Stats (Avg ETAs/Traffic):\n");
+                summary.append("Historical Route Stats (Avg ETAs/Traffic Patterns):\n");
                 for (Map.Entry<String, Object> entry : routeAnalytics.entrySet()) {
                     summary.append("- ").append(entry.getKey()).append(": ").append(entry.getValue().toString()).append("\n");
                 }
@@ -233,26 +236,35 @@ public class AIChatbotActivity extends AppCompatActivity {
         boolean askedLeave = normalized.contains("leave") || normalized.contains("walking") || normalized.contains("best time") || normalized.contains("catch");
 
         if (askedETA) {
-            return "Predictive ETA helper:\n• I use historical traffic patterns to improve arrival predictions.";
-        }
-        if (askedSeats) {
-            return "Seat availability forecasting:\n• I predict 'Crowded' or 'Seats Available' based on past boarding patterns.";
-        }
-        if (askedLeave) {
-            return "Best time to leave:\n• I compare bus ETA and your walking distance to tell you when to leave!";
+            return "Predictive ETA helper:\n" +
+                    "• I use historical travel speeds and traffic patterns to improve arrival predictions.\n" +
+                    "• If the route is late at 5 PM on Fridays, I suggest adding a buffer of 10–15 minutes.";
         }
 
-        return "I can help with predictive ETA, seat availability, and best-time-to-leave advice.";
+        if (askedSeats) {
+            return "Seat availability forecasting:\n" +
+                    "• I predict 'Crowded', 'Standing Room Only', or 'Seats Available' based on past boarding patterns.\n" +
+                    "• For example: The 8:00 AM bus is usually 95% full, while the 8:15 AM bus is typically only 40% full.";
+        }
+
+        if (askedLeave) {
+            return "Best time to leave recommendations:\n" +
+                    "• I compare the bus ETA, your walking distance (about 1.2m/s walking speed), and a safety margin.\n" +
+                    "• If the bus is 10 minutes away and you need 8 minutes to reach the stop, you should leave now!";
+        }
+
+        return "I can help with predictive ETA, seat availability forecasting, and best-time-to-leave recommendations. " +
+                "Try asking: 'What is the expected arrival time for my next bus?' or 'Will the 8:00 AM bus be crowded?'";
     }
 
     private String callApiFreeLlm(String userMessage, String context) throws Exception {
         String systemPersona = "You are 'LugarLang Assistant', an intelligent bus tracking helper in Cebu. " +
-                "YOU HAVE FULL PERMISSION TO ACCESS THE USER'S LOCATION DATA PROVIDED IN CONTEXT. " +
-                "Use the provided coordinates, current time, and historical stats to give precise advice.\n\n" +
+                "Use the provided DATA CONTEXT (historical stats, occupancy, current time, user location) to give smart advice.\n\n" +
                 "CORE CAPABILITIES:\n" +
-                "1. Intelligent Seat Forecasting: Use 'Occupancy Patterns' to predict crowdedness.\n" +
-                "2. Best Time to Leave: Calculate if the user should leave now based on their coordinates and the bus ETA.\n" +
-                "3. Predictive ETA: Adjust estimates based on 'Historical Route Stats'.\n\n" +
+                "1. Intelligent Seat Forecasting: Predict 'Crowded' or 'Seats Available' based on 'Occupancy Patterns' for the current time/route.\n" +
+                "2. Best Time to Leave: Compare bus ETA with current time and user's walking distance. Assume average walking speed of 5 km/h if distance is known.\n" +
+                "3. Predictive ETA: Adjust standard schedules based on 'Historical Route Stats' (e.g., peak hour traffic).\n" +
+                "4. Alternative Suggestions: If a bus is usually full, suggest a less crowded alternative nearby in time.\n\n" +
                 "DATA CONTEXT:\n" + context;
 
         JSONObject payload = new JSONObject();
@@ -285,6 +297,8 @@ public class AIChatbotActivity extends AppCompatActivity {
                 responseBuilder.append(line);
             }
             String responseText = responseBuilder.toString();
+            Log.d(TAG, "API Response: " + responseText);
+
             JSONObject responseJson = new JSONObject(responseText);
             if (responseJson.optBoolean("success", false)) {
                 return responseJson.optString("response", "No response content.");
