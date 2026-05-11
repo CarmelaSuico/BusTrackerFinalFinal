@@ -42,7 +42,7 @@ public class Ticketing extends AppCompatActivity {
     private int distanceBands;
     private final double DISCOUNT_RATE = 0.20;
 
-    private int passengerCount = 0;
+    private int passengerCount = 20; // Corrected starting count to 20 for Seats Available
 
     private final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
@@ -88,6 +88,9 @@ public class Ticketing extends AppCompatActivity {
         btnDashboardNav = findViewById(R.id.btndriverorconddashoard);
         btnTicket = findViewById(R.id.btnticketing);
         btnSetting = findViewById(R.id.btnsetting);
+
+        // Update UI to match initial variable value
+        updatePassengerCountUI();
     }
 
     private void setupNavigation() {
@@ -205,9 +208,14 @@ public class Ticketing extends AppCompatActivity {
             return;
         }
 
-        // AUTO-INCREMENT immediately when "Issue Ticket" is pressed
-        passengerCount++;
-        updatePassengerCountUI();
+        // DECREMENT seats available when "Issue Ticket" is pressed
+        if (passengerCount > 0) {
+            passengerCount--;
+            updatePassengerCountUI();
+        } else {
+            Toast.makeText(this, "No seats available", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         GeoPoint start = stopPoints.get(originIdx);
         GeoPoint end = stopPoints.get(destIdx);
@@ -282,21 +290,14 @@ public class Ticketing extends AppCompatActivity {
         ticket.put("timestamp", readableTimestamp);
         ticket.put("route_code", routeCode);
 
-        String ticketKey = ticketsRef.push().getKey();
-        if (ticketKey != null) {
-            ticketsRef.child(ticketKey).setValue(ticket).addOnSuccessListener(aVoid -> {
-                Log.d("Ticketing", "Ticket saved to Firebase");
-            });
-        }
+        ticketsRef.push().setValue(ticket)
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Ticket Issued", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save ticket", Toast.LENGTH_SHORT).show());
     }
 
-    private GeoPoint parseCoords(String s) {
-        if (s == null || s.isEmpty()) return new GeoPoint(0.0, 0.0);
-        try {
-            String[] p = s.split(",");
-            return new GeoPoint(Double.parseDouble(p[0].trim()), Double.parseDouble(p[1].trim()));
-        } catch (Exception e) {
-            return new GeoPoint(0.0, 0.0);
-        }
+    private GeoPoint parseCoords(String coords) {
+        if (coords == null || !coords.contains(",")) return new GeoPoint(0.0, 0.0);
+        String[] parts = coords.split(",");
+        return new GeoPoint(Double.parseDouble(parts[0].trim()), Double.parseDouble(parts[1].trim()));
     }
 }
