@@ -46,7 +46,7 @@ import java.util.Map;
 public class AIChatbotActivity extends AppCompatActivity {
 
     private static final String TAG = "AIChatbotActivity";
-    private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app";
     private static final String API_FREE_LLM_URL = "https://apifreellm.com/api/v1/chat";
     private static final String API_FREE_LLM_KEY = "apf_e01xhboqhfcszahxvicusv13";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -71,7 +71,6 @@ public class AIChatbotActivity extends AppCompatActivity {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Get location passed from commuterhome as a fallback
         userLat = getIntent().getDoubleExtra("user_lat", 0.0);
         userLon = getIntent().getDoubleExtra("user_lon", 0.0);
 
@@ -183,35 +182,40 @@ public class AIChatbotActivity extends AppCompatActivity {
     }
 
     private void loadAnalyticsData() {
-        DatabaseReference analyticsRef = FirebaseDatabase.getInstance(DB_URL).getReference("analytics");
-        analyticsRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                routeAnalytics.clear();
-                occupancyAnalytics.clear();
-                if (snapshot.hasChild("route_stats")) {
-                    for (DataSnapshot routeSnapshot : snapshot.child("route_stats").getChildren()) {
-                        routeAnalytics.put(routeSnapshot.getKey(), routeSnapshot.getValue());
+        try {
+            DatabaseReference analyticsRef = FirebaseDatabase.getInstance(DB_URL).getReference("analytics");
+            analyticsRef.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    routeAnalytics.clear();
+                    occupancyAnalytics.clear();
+                    if (snapshot.hasChild("route_stats")) {
+                        for (DataSnapshot routeSnapshot : snapshot.child("route_stats").getChildren()) {
+                            routeAnalytics.put(routeSnapshot.getKey(), routeSnapshot.getValue());
+                        }
+                    }
+                    if (snapshot.hasChild("occupancy")) {
+                        for (DataSnapshot occupancySnapshot : snapshot.child("occupancy").getChildren()) {
+                            occupancyAnalytics.put(occupancySnapshot.getKey(), occupancySnapshot.getValue());
+                        }
                     }
                 }
-                if (snapshot.hasChild("occupancy")) {
-                    for (DataSnapshot occupancySnapshot : snapshot.child("occupancy").getChildren()) {
-                        occupancyAnalytics.put(occupancySnapshot.getKey(), occupancySnapshot.getValue());
-                    }
-                }
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                runOnUiThread(() -> Toast.makeText(AIChatbotActivity.this, "Analytics load failed: " + error.getMessage(), Toast.LENGTH_SHORT).show());
-            }
-        });
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Firebase Load Error: " + error.getMessage());
+                    // Don't show a toast for permission denied to avoid annoying the user; 
+                    // the AI context builder will handle the empty state.
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Firebase Initialization Error", e);
+        }
     }
 
     private String buildAnalyticsSummary() {
         StringBuilder summary = new StringBuilder();
         
-        // Feed current time and user location to AI
         String currentTime = new SimpleDateFormat("HH:mm, EEEE", Locale.getDefault()).format(new Date());
         summary.append("Current Time: ").append(currentTime).append("\n");
         if (userLat != 0.0 && userLon != 0.0) {
@@ -219,7 +223,7 @@ public class AIChatbotActivity extends AppCompatActivity {
         }
 
         if (routeAnalytics.isEmpty() && occupancyAnalytics.isEmpty()) {
-            summary.append("Note: No specific historical route stats or occupancy patterns available yet.\n");
+            summary.append("Note: No specific historical route stats or occupancy patterns available right now (Server access limited).\n");
         } else {
             if (!routeAnalytics.isEmpty()) {
                 summary.append("Historical Route Stats (Avg ETAs/Traffic Patterns):\n");
