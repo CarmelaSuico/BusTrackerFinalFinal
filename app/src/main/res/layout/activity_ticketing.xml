@@ -68,7 +68,7 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginHorizontal="20dp"
                 app:cardCornerRadius="15dp"
-                app:cardBackgroundColor="@color/brand_primary"
+                app:cardBackgroundColor="#00BF63"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvRouteLabel">
@@ -147,11 +147,91 @@
                         android:layout_gravity="end"
                         android:text="Issue Ticket"
                         android:textAllCaps="false"
-                        android:backgroundTint="@color/brand_primary"
+                        android:backgroundTint="#00BF63"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         app:cornerRadius="15dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Seats Available Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/seats_available_card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="25dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="#D9D9D9"
+                app:layout_constraintWidth_percent="0.9"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/form_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Seats available"
+                        android:textColor="#444444"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSubtractSeat"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:text="-"
+                            android:textSize="24sp"
+                            android:backgroundTint="#FF5252"
+                            android:textColor="@color/white"
+                            app:cornerRadius="28dp"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"/>
+
+                        <TextView
+                            android:id="@+id/tvSeatsCount"
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="20"
+                            android:textColor="@color/black"
+                            android:textSize="32sp"
+                            android:fontFamily="sans-serif-black"
+                            android:layout_marginHorizontal="24dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAddSeat"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:text="+"
+                            android:textSize="24sp"
+                            android:backgroundTint="#00BF63"
+                            android:textColor="@color/white"
+                            app:cornerRadius="28dp"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"/>
+                    </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
