@@ -58,6 +58,9 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".AIChatbotActivity"
+            android:exported="false" />
+        <activity
             android:name=".driverconductor.Ticketing"
             android:exported="false" />
         <activity

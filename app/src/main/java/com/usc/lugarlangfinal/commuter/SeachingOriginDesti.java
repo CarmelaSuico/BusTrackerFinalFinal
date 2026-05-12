@@ -22,6 +22,7 @@ import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.usc.lugarlangfinal.AIChatbotActivity;
 import com.usc.lugarlangfinal.R;
 import com.usc.lugarlangfinal.Settings;
 import com.usc.lugarlangfinal.commuterhome;
@@ -106,6 +107,7 @@ public class SeachingOriginDesti extends AppCompatActivity {
 
         // Nav logic
         findViewById(R.id.btnhomepage).setOnClickListener(v -> startActivity(new Intent(this, commuterhome.class)));
+        findViewById(R.id.btnaihelp).setOnClickListener(v -> startActivity(new Intent(this, AIChatbotActivity.class)));
         findViewById(R.id.btnsetting).setOnClickListener(v -> startActivity(new Intent(this, Settings.class)));
         findViewById(R.id.btnsearch).setSelected(true);
     }
