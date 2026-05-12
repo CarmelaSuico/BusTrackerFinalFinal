@@ -25,6 +25,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.usc.lugarlangfinal.adapters.ChatAdapter;
 import com.usc.lugarlangfinal.models.ChatMessage;
+import com.usc.lugarlangfinal.models.Route;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -46,7 +47,7 @@ import java.util.Map;
 public class AIChatbotActivity extends AppCompatActivity {
 
     private static final String TAG = "AIChatbotActivity";
-    private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app";
+    private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
     private static final String API_FREE_LLM_URL = "https://apifreellm.com/api/v1/chat";
     private static final String API_FREE_LLM_KEY = "apf_e01xhboqhfcszahxvicusv13";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -59,6 +60,7 @@ public class AIChatbotActivity extends AppCompatActivity {
 
     private final Map<String, Object> routeAnalytics = new HashMap<>();
     private final Map<String, Object> occupancyAnalytics = new HashMap<>();
+    private final List<Route> masterRoutes = new ArrayList<>();
 
     private FusedLocationProviderClient fusedLocationClient;
     private double userLat = 0.0;
@@ -83,8 +85,7 @@ public class AIChatbotActivity extends AppCompatActivity {
         rvChat.setAdapter(chatAdapter);
 
         showIntroduction();
-
-        loadAnalyticsData();
+        loadAllDatabaseData();
         checkLocationPermission();
 
         btnSend.setOnClickListener(v -> {
@@ -181,36 +182,45 @@ public class AIChatbotActivity extends AppCompatActivity {
         }
     }
 
-    private void loadAnalyticsData() {
-        try {
-            DatabaseReference analyticsRef = FirebaseDatabase.getInstance(DB_URL).getReference("analytics");
-            analyticsRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    routeAnalytics.clear();
-                    occupancyAnalytics.clear();
-                    if (snapshot.hasChild("route_stats")) {
-                        for (DataSnapshot routeSnapshot : snapshot.child("route_stats").getChildren()) {
-                            routeAnalytics.put(routeSnapshot.getKey(), routeSnapshot.getValue());
-                        }
-                    }
-                    if (snapshot.hasChild("occupancy")) {
-                        for (DataSnapshot occupancySnapshot : snapshot.child("occupancy").getChildren()) {
-                            occupancyAnalytics.put(occupancySnapshot.getKey(), occupancySnapshot.getValue());
-                        }
+    private void loadAllDatabaseData() {
+        DatabaseReference db = FirebaseDatabase.getInstance(DB_URL).getReference();
+        
+        // Load Analytics
+        db.child("analytics").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                routeAnalytics.clear();
+                occupancyAnalytics.clear();
+                if (snapshot.hasChild("route_stats")) {
+                    for (DataSnapshot routeSnapshot : snapshot.child("route_stats").getChildren()) {
+                        routeAnalytics.put(routeSnapshot.getKey(), routeSnapshot.getValue());
                     }
                 }
+                if (snapshot.hasChild("occupancy")) {
+                    for (DataSnapshot occupancySnapshot : snapshot.child("occupancy").getChildren()) {
+                        occupancyAnalytics.put(occupancySnapshot.getKey(), occupancySnapshot.getValue());
+                    }
+                }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Analytics Error: " + error.getMessage());
+            }
+        });
 
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Log.e(TAG, "Firebase Load Error: " + error.getMessage());
-                    // Don't show a toast for permission denied to avoid annoying the user; 
-                    // the AI context builder will handle the empty state.
+        // Load Routes for full access
+        db.child("routes").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                masterRoutes.clear();
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    Route route = ds.getValue(Route.class);
+                    if (route != null) masterRoutes.add(route);
                 }
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Firebase Initialization Error", e);
-        }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Routes Error: " + error.getMessage());
+            }
+        });
     }
 
     private String buildAnalyticsSummary() {
@@ -222,17 +232,28 @@ public class AIChatbotActivity extends AppCompatActivity {
             summary.append("User Current Coordinates: ").append(userLat).append(", ").append(userLon).append("\n");
         }
 
+        // Add Route Information
+        if (!masterRoutes.isEmpty()) {
+            summary.append("\nAVAILABLE ROUTES & FARES:\n");
+            for (Route r : masterRoutes) {
+                summary.append("Route ").append(r.getRouteCode()).append(": ")
+                        .append(r.getTerminal1()).append(" to ").append(r.getTerminal2())
+                        .append(". Base Fare: P").append(r.getBaseFare())
+                        .append(". Stops: ").append(r.getStops()).append("\n");
+            }
+        }
+
         if (routeAnalytics.isEmpty() && occupancyAnalytics.isEmpty()) {
-            summary.append("Note: No specific historical route stats or occupancy patterns available right now (Server access limited).\n");
+            summary.append("\nNote: No specific historical route stats or occupancy patterns available right now.\n");
         } else {
             if (!routeAnalytics.isEmpty()) {
-                summary.append("Historical Route Stats (Avg ETAs/Traffic Patterns):\n");
+                summary.append("\nHistorical Route Stats (Avg ETAs/Traffic Patterns):\n");
                 for (Map.Entry<String, Object> entry : routeAnalytics.entrySet()) {
                     summary.append("- ").append(entry.getKey()).append(": ").append(entry.getValue().toString()).append("\n");
                 }
             }
             if (!occupancyAnalytics.isEmpty()) {
-                summary.append("Occupancy Patterns (Seat Availability Trends):\n");
+                summary.append("\nOccupancy Patterns (Seat Availability Trends):\n");
                 for (Map.Entry<String, Object> entry : occupancyAnalytics.entrySet()) {
                     summary.append("- ").append(entry.getKey()).append(": ").append(entry.getValue().toString()).append("\n");
                 }
@@ -272,12 +293,13 @@ public class AIChatbotActivity extends AppCompatActivity {
 
     private String callApiFreeLlm(String userMessage, String context) throws Exception {
         String systemPersona = "You are 'LugarLang Assistant', an intelligent bus tracking helper in Cebu. " +
-                "Use the provided DATA CONTEXT (historical stats, occupancy, current time, user location) to give smart advice.\n\n" +
+                "Use the provided DATA CONTEXT (routes, fares, historical stats, occupancy, current time, user location) to give smart advice.\n\n" +
                 "CORE CAPABILITIES:\n" +
                 "1. Intelligent Seat Forecasting: Predict 'Crowded' or 'Seats Available' based on 'Occupancy Patterns' for the current time/route.\n" +
                 "2. Best Time to Leave: Compare bus ETA with current time and user's walking distance. Assume average walking speed of 5 km/h if distance is known.\n" +
                 "3. Predictive ETA: Adjust standard schedules based on 'Historical Route Stats' (e.g., peak hour traffic).\n" +
-                "4. Alternative Suggestions: If a bus is usually full, suggest a less crowded alternative nearby in time.\n\n" +
+                "4. Route Guidance: Provide info on available routes, terminals, stops, and base fares from the provided route list.\n" +
+                "5. Alternative Suggestions: If a bus is usually full, suggest a less crowded alternative nearby in time.\n\n" +
                 "DATA CONTEXT:\n" + context;
 
         JSONObject payload = new JSONObject();
