@@ -13,17 +13,22 @@ public class QRCodePaymentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_qr_code_payment);
 
-        MaterialButton btnPaymentConfirmed = findViewById(R.id.btnPaymentConfirmed);
-        MaterialButton btnUseSMS = findViewById(R.id.btnUseSMS);
+        MaterialButton btnConfirmPayment = findViewById(R.id.btnConfirmPayment);
+        MaterialButton btnConfirmSMS = findViewById(R.id.btnConfirmSMS);
 
-        btnPaymentConfirmed.setOnClickListener(v -> {
-            // Returns back to the previous screen
-            finish();
-        });
+        if (btnConfirmPayment != null) {
+            btnConfirmPayment.setOnClickListener(v -> {
+                // Returns back to the previous screen
+                finish();
+            });
+        }
 
-        btnUseSMS.setOnClickListener(v -> {
-            // No function yet as requested
-            Toast.makeText(this, "SMS function coming soon", Toast.LENGTH_SHORT).show();
-        });
+        if (btnConfirmSMS != null) {
+            btnConfirmSMS.setOnClickListener(v -> {
+                // Shows toast and returns back to the previous screen
+                Toast.makeText(this, "receipt sent", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+        }
     }
 }
