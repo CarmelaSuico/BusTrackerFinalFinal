@@ -16,8 +16,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -48,6 +46,7 @@ public class commuterhome extends BaseActivity {
     private MyLocationNewOverlay mLocationOverlay;
     private SearchView searchView;
     private SimpleCursorAdapter suggestionAdapter;
+    private LinearLayout btnAIHelp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,13 +72,26 @@ public class commuterhome extends BaseActivity {
         });
 
         btnSetting.setOnClickListener(v -> {
-            // FIX: Explicitly use your local Settings activity
             startActivity(new Intent(commuterhome.this, com.usc.lugarlangfinal.Settings.class));
         });
 
         // Start Permission and GPS Sequence
         checkLocationPermissions();
         setupSearch();
+        setupAIHelpButton();
+    }
+
+    private void setupAIHelpButton() {
+        btnAIHelp = findViewById(R.id.btnaihelp);
+        btnAIHelp.setOnClickListener(v -> {
+            Intent intent = new Intent(commuterhome.this, AIChatbotActivity.class);
+            if (mLocationOverlay != null && mLocationOverlay.getMyLocation() != null) {
+                // Pass current location to the AI Chatbot for better recommendations
+                intent.putExtra("user_lat", mLocationOverlay.getMyLocation().getLatitude());
+                intent.putExtra("user_lon", mLocationOverlay.getMyLocation().getLongitude());
+            }
+            startActivity(intent);
+        });
     }
 
     private void checkLocationPermissions() {
@@ -107,7 +119,6 @@ public class commuterhome extends BaseActivity {
                     .setMessage("Please turn on your GPS to allow the app to find your current location.")
                     .setCancelable(false)
                     .setPositiveButton("Settings", (dialog, which) -> {
-                        // FIX: Use the specific System Action to prevent ActivityNotFoundException
                         startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
                     })
                     .setNegativeButton("Cancel", (dialog, which) -> {

@@ -4,17 +4,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.LinearLayout;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.usc.lugarlangfinal.commuter.SeachingOriginDesti;
 
 public class Settings extends AppCompatActivity {
-    LinearLayout btnHomePage, btnSearch, btnSetting;
+    LinearLayout btnHomePage, btnSearch, btnSetting, btnAIHelp;
 
     MaterialButton btnPortal;
 
@@ -26,6 +22,7 @@ public class Settings extends AppCompatActivity {
         btnHomePage = findViewById(R.id.btnhomepage);
         btnSearch = findViewById(R.id.btnsearch);
         btnSetting = findViewById(R.id.btnsetting);
+        btnAIHelp = findViewById(R.id.btnaihelp);
         btnPortal = findViewById(R.id.btnPortal);
 
         btnSetting.setSelected(true);
@@ -36,6 +33,10 @@ public class Settings extends AppCompatActivity {
 
         btnSearch.setOnClickListener(v -> {
             startActivity(new Intent(Settings.this, SeachingOriginDesti.class));
+        });
+
+        btnAIHelp.setOnClickListener(v -> {
+            startActivity(new Intent(Settings.this, AIChatbotActivity.class));
         });
 
         btnPortal.setOnClickListener(v -> {
