@@ -66,6 +66,9 @@
         <activity
             android:name=".driverconductor.QRCodePaymentActivity"
             android:exported="false" />
+        <activity
+            android:name=".driverconductor.TicketHistoryActivity"
+            android:exported="false" />
 
         <service
             android:name=".driverconductor.LocationService"

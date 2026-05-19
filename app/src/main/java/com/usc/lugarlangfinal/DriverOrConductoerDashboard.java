@@ -73,7 +73,10 @@ public class DriverOrConductoerDashboard extends AppCompatActivity {
                 intent.putExtra("ROUTE_CODE", currentTrip.getRouteCode());
                 intent.putExtra("COMPANY_NAME", userFranchise);
                 intent.putExtra("EMPLOYEE_ID", employeeNumericId);
+                intent.putExtra("PLATE_NUMBER", currentTrip.getPlateNumber());
                 startActivity(intent);
+            } else {
+                Toast.makeText(this, "No assigned trip found.", Toast.LENGTH_SHORT).show();
             }
         });
 

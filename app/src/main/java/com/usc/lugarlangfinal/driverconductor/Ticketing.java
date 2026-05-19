@@ -32,17 +32,17 @@ import java.util.Map;
 public class Ticketing extends AppCompatActivity {
     private Spinner spOrigin, spDestination, spPassengerType;
     private TextView tvTicketT1, tvTicketT2, tvPassengerCount;
-    private Button btnSubmit, btnAddPassenger, btnSubtractPassenger;
+    private Button btnSubmit, btnAddPassenger, btnSubtractPassenger, btnHistory;
     private LinearLayout btnDashboardNav, btnTicket, btnSetting;
 
-    private String routeCode, companyName, employeeId;
+    private String routeCode, companyName, employeeId, plateNumber;
     private ArrayList<String> stopNames = new ArrayList<>();
     private ArrayList<GeoPoint> stopPoints = new ArrayList<>();
     private double baseFare, additionalFarePerBand;
     private int distanceBands;
     private final double DISCOUNT_RATE = 0.20;
 
-    private int passengerCount = 20; // Corrected starting count to 20 for Seats Available
+    private int passengerCount = 20;
 
     private final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
@@ -58,6 +58,7 @@ public class Ticketing extends AppCompatActivity {
         routeCode = getIntent().getStringExtra("ROUTE_CODE");
         companyName = getIntent().getStringExtra("COMPANY_NAME");
         employeeId = getIntent().getStringExtra("EMPLOYEE_ID");
+        plateNumber = getIntent().getStringExtra("PLATE_NUMBER");
 
         if (routeCode == null) {
             Toast.makeText(this, "Error: No route assigned for ticketing", Toast.LENGTH_LONG).show();
@@ -69,6 +70,15 @@ public class Ticketing extends AppCompatActivity {
         fetchRouteData();
 
         btnSubmit.setOnClickListener(v -> calculateAndSaveTicket());
+        
+        if (btnHistory != null) {
+            btnHistory.setOnClickListener(v -> {
+                Intent intent = new Intent(this, TicketHistoryActivity.class);
+                intent.putExtra("COMPANY_NAME", companyName);
+                intent.putExtra("PLATE_NUMBER", plateNumber);
+                startActivity(intent);
+            });
+        }
     }
 
     private void initViews() {
@@ -78,18 +88,16 @@ public class Ticketing extends AppCompatActivity {
         tvTicketT1 = findViewById(R.id.tvTicketT1);
         tvTicketT2 = findViewById(R.id.tvTicketT2);
         btnSubmit = findViewById(R.id.btnSubmitTicket);
+        btnHistory = findViewById(R.id.btnTicketHistory);
 
-        // Passenger Counter Views - updated to match activity_ticketing.xml IDs
         tvPassengerCount = findViewById(R.id.tvSeatsCount);
         btnAddPassenger = findViewById(R.id.btnAddSeat);
         btnSubtractPassenger = findViewById(R.id.btnSubtractSeat);
 
-        // Navigation buttons from included layout
         btnDashboardNav = findViewById(R.id.btndriverorconddashoard);
         btnTicket = findViewById(R.id.btnticketing);
         btnSetting = findViewById(R.id.btnsetting);
 
-        // Update UI to match initial variable value
         updatePassengerCountUI();
     }
 
@@ -208,7 +216,6 @@ public class Ticketing extends AppCompatActivity {
             return;
         }
 
-        // DECREMENT seats available when "Issue Ticket" is pressed
         if (passengerCount > 0) {
             passengerCount--;
             updatePassengerCountUI();
@@ -256,43 +263,22 @@ public class Ticketing extends AppCompatActivity {
         ((TextView) dialogView.findViewById(R.id.resTotal)).setText(String.format("Php %.2f", total));
 
         dialogView.findViewById(R.id.btnConfirmTicket).setOnClickListener(v -> {
-            saveTicketToFirebase(start, end, type, reg, disc, total);
             dialog.dismiss();
             
-            // Intent to QR Payment Activity
             Intent intent = new Intent(Ticketing.this, QRCodePaymentActivity.class);
+            intent.putExtra("COMPANY_NAME", companyName);
+            intent.putExtra("PLATE_NUMBER", plateNumber);
+            intent.putExtra("ORIGIN", start);
+            intent.putExtra("DESTINATION", end);
+            intent.putExtra("PASSENGER_TYPE", type);
+            intent.putExtra("REGULAR_FARE", reg);
+            intent.putExtra("DISCOUNT", disc);
+            intent.putExtra("TOTAL_FARE", total);
+            intent.putExtra("ROUTE_CODE", routeCode);
             startActivity(intent);
         });
 
         dialog.show();
-    }
-
-    private void saveTicketToFirebase(String start, String end, String type, double reg, double disc, double total) {
-        if (companyName == null || employeeId == null) {
-            Toast.makeText(this, "Error: User context missing", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        DatabaseReference ticketsRef = FirebaseDatabase.getInstance(DB_URL).getReference("ticket_logs")
-                .child(companyName)
-                .child(employeeId.replace(".", ","));
-
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a", java.util.Locale.getDefault());
-        String readableTimestamp = sdf.format(new java.util.Date());
-
-        Map<String, Object> ticket = new HashMap<>();
-        ticket.put("origin", start);
-        ticket.put("destination", end);
-        ticket.put("passenger_type", type);
-        ticket.put("regular_fare", Math.round(reg * 100.0) / 100.0);
-        ticket.put("discount", Math.round(disc * 100.0) / 100.0);
-        ticket.put("total_fare", Math.round(total * 100.0) / 100.0);
-        ticket.put("timestamp", readableTimestamp);
-        ticket.put("route_code", routeCode);
-
-        ticketsRef.push().setValue(ticket)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Ticket Issued", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save ticket", Toast.LENGTH_SHORT).show());
     }
 
     private GeoPoint parseCoords(String coords) {
