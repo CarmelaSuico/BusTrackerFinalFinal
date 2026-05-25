@@ -21,7 +21,6 @@ import androidx.core.content.ContextCompat;
 import androidx.cursoradapter.widget.CursorAdapter;
 import androidx.cursoradapter.widget.SimpleCursorAdapter;
 
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.usc.lugarlangfinal.AIChatbotActivity;
 import com.usc.lugarlangfinal.R;
 import com.usc.lugarlangfinal.Settings;
@@ -103,7 +102,8 @@ public class SeachingOriginDesti extends AppCompatActivity {
             }
         });
 
-        btnSuggestionRoutes.setOnClickListener(v -> showTransportDialog());
+        // Directly execute route suggestion with "Bus" scoping
+        btnSuggestionRoutes.setOnClickListener(v -> startSuggested("Bus"));
 
         // Nav logic
         findViewById(R.id.btnhomepage).setOnClickListener(v -> startActivity(new Intent(this, commuterhome.class)));
@@ -229,16 +229,7 @@ public class SeachingOriginDesti extends AppCompatActivity {
         map.getController().setCenter(new GeoPoint(10.3157, 123.8854));
     }
 
-    private void showTransportDialog() {
-        BottomSheetDialog d = new BottomSheetDialog(this);
-        View v = getLayoutInflater().inflate(R.layout.layout_transport_selection, null);
-        v.findViewById(R.id.optionBus).setOnClickListener(view -> startSuggested("Bus", d));
-        v.findViewById(R.id.optionJeepney).setOnClickListener(view -> startSuggested("Jeepney", d));
-        d.setContentView(v); d.show();
-    }
-
-    private void startSuggested(String type, BottomSheetDialog d) {
-        d.dismiss();
+    private void startSuggested(String type) {
         Intent i = new Intent(this, SuggestedRoutes.class);
         i.putExtra("TRANSPORT_TYPE", type);
         i.putExtra("ORIGIN_LAT", originPoint.getLatitude());
