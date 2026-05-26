@@ -1,16 +1,17 @@
 package com.usc.lugarlangfinal;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,6 +25,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.usc.lugarlangfinal.adapters.ChatAdapter;
+import com.usc.lugarlangfinal.commuter.SeachingOriginDesti;
 import com.usc.lugarlangfinal.models.ChatMessage;
 import com.usc.lugarlangfinal.models.Route;
 
@@ -44,7 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class AIChatbotActivity extends AppCompatActivity {
+public class AIChatbotActivity extends BaseActivity {
 
     private static final String TAG = "AIChatbotActivity";
     private static final String DB_URL = "https://lugarlangfinal-default-rtdb.asia-southeast1.firebasedatabase.app/";
@@ -66,6 +68,9 @@ public class AIChatbotActivity extends AppCompatActivity {
     private double userLat = 0.0;
     private double userLon = 0.0;
 
+    // Navbar buttons
+    private LinearLayout btnHomePage, btnSearch, btnSetting, btnAIHelp;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +89,7 @@ public class AIChatbotActivity extends AppCompatActivity {
         rvChat.setLayoutManager(new LinearLayoutManager(this));
         rvChat.setAdapter(chatAdapter);
 
+        setupNavbar();
         showIntroduction();
         loadAllDatabaseData();
         checkLocationPermission();
@@ -99,8 +105,34 @@ public class AIChatbotActivity extends AppCompatActivity {
         });
     }
 
+    private void setupNavbar() {
+        btnHomePage = findViewById(R.id.btnhomepage);
+        btnSearch = findViewById(R.id.btnsearch);
+        btnSetting = findViewById(R.id.btnsetting);
+        btnAIHelp = findViewById(R.id.btnaihelp);
+
+        btnAIHelp.setSelected(true);
+
+        btnHomePage.setOnClickListener(v -> {
+            startActivity(new Intent(this, commuterhome.class));
+            finish();
+        });
+
+        btnSearch.setOnClickListener(v -> {
+            startActivity(new Intent(this, SeachingOriginDesti.class));
+            finish();
+        });
+
+        btnSetting.setOnClickListener(v -> {
+            startActivity(new Intent(this, Settings.class));
+            finish();
+        });
+        
+        // btnAIHelp is current activity
+    }
+
     private void showIntroduction() {
-        String intro = "Hello! I am LugarLang AI Assistant, your intelligent companion for navigating Cebu's bus routes. " +
+        String intro = "Hello! I am **LugarLang AI Assistant**, your intelligent companion for navigating Cebu's bus routes. " +
                 "I can help you with predictive ETAs, seat availability forecasting, and recommending the best time to leave for your trip. " +
                 "How can I assist you today?";
         addChatMessage(intro, false);
@@ -294,12 +326,15 @@ public class AIChatbotActivity extends AppCompatActivity {
     private String callApiFreeLlm(String userMessage, String context) throws Exception {
         String systemPersona = "You are 'LugarLang Assistant', an intelligent bus tracking helper in Cebu. " +
                 "Use the provided DATA CONTEXT (routes, fares, historical stats, occupancy, current time, user location) to give smart advice.\n\n" +
+                "STYLE GUIDELINES:\n" +
+                "- Use **bold text** for important names, routes, and times.\n" +
+                "- Use clear bullet points or numbered lists for instructions.\n" +
+                "- Keep responses concise but helpful.\n\n" +
                 "CORE CAPABILITIES:\n" +
-                "1. Intelligent Seat Forecasting: Predict 'Crowded' or 'Seats Available' based on 'Occupancy Patterns' for the current time/route.\n" +
-                "2. Best Time to Leave: Compare bus ETA with current time and user's walking distance. Assume average walking speed of 5 km/h if distance is known.\n" +
-                "3. Predictive ETA: Adjust standard schedules based on 'Historical Route Stats' (e.g., peak hour traffic).\n" +
-                "4. Route Guidance: Provide info on available routes, terminals, stops, and base fares from the provided route list.\n" +
-                "5. Alternative Suggestions: If a bus is usually full, suggest a less crowded alternative nearby in time.\n\n" +
+                "1. Intelligent Seat Forecasting: Predict 'Crowded' or 'Seats Available' based on 'Occupancy Patterns'.\n" +
+                "2. Best Time to Leave: Compare bus ETA with current time and user's walking distance.\n" +
+                "3. Predictive ETA: Adjust standard schedules based on 'Historical Route Stats'.\n" +
+                "4. Route Guidance: Provide info on available routes, terminals, stops, and base fares.\n\n" +
                 "DATA CONTEXT:\n" + context;
 
         JSONObject payload = new JSONObject();
