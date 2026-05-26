@@ -1,11 +1,13 @@
 package com.usc.lugarlangfinal.adapters;
 
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.text.HtmlCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.usc.lugarlangfinal.R;
@@ -31,7 +33,13 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
     @Override
     public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
         ChatMessage message = messages.get(position);
-        holder.messageText.setText(message.getText());
+
+        // Handle basic markdown bolding (**text**) and newlines
+        String processedText = message.getText()
+                .replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>")
+                .replace("\n", "<br>");
+
+        holder.messageText.setText(HtmlCompat.fromHtml(processedText, HtmlCompat.FROM_HTML_MODE_LEGACY));
 
         if (message.isFromUser()) {
             holder.messageContainer.setBackgroundResource(R.drawable.chat_bubble_user);
